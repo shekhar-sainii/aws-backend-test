@@ -1,4 +1,6 @@
 const express = require('express');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./config/swagger');
 const healthRoutes = require('./routes/health.routes');
 const itemRoutes = require('./routes/item.routes');
 const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler');
@@ -26,6 +28,9 @@ app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
+
+// Swagger API Documentation UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Routes
 app.use('/', healthRoutes);

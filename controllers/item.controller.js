@@ -1,3 +1,7 @@
+const redisClient = require('../config/redis');
+
+const CACHE_KEY = 'items';
+
 // In-memory array to simulate a database for demonstration purposes
 let items = [
   {
@@ -17,11 +21,57 @@ let items = [
 ];
 
 /**
- * Get all items
+ * Helper to invalidate Redis cache safely
  */
-const getItems = (req, res) => {
+const invalidateCache = async () => {
+  if (redisClient.isOpen) {
+    try {
+      await redisClient.del(CACHE_KEY);
+      console.log(`[Cache]: Invalidated items list in Redis (Key: ${CACHE_KEY})`);
+    } catch (err) {
+      console.error(`[Cache Error]: Failed to invalidate cache: ${err.message}`);
+    }
+  }
+};
+
+/**
+ * Get all items (with Redis Caching)
+ */
+const getItems = async (req, res) => {
+  // 1. Try to fetch from Redis Cache if connected
+  if (redisClient.isOpen) {
+    try {
+      const cachedData = await redisClient.get(CACHE_KEY);
+      if (cachedData) {
+        console.log(`[Cache]: HIT - Fetching items list from Redis (Key: ${CACHE_KEY})`);
+        return res.status(200).json({
+          success: true,
+          source: 'cache',
+          count: JSON.parse(cachedData).length,
+          data: JSON.parse(cachedData)
+        });
+      }
+    } catch (err) {
+      console.error(`[Cache Error]: Failed to retrieve cache: ${err.message}`);
+    }
+  }
+
+  // 2. Cache Miss - Fetch from database (in-memory simulation)
+  console.log(`[Cache]: MISS - Fetching items list from database`);
+
+  // 3. Set Cache in Redis if connected
+  if (redisClient.isOpen) {
+    try {
+      await redisClient.set(CACHE_KEY, JSON.stringify(items));
+      console.log(`[Cache]: Cached items list in Redis (Key: ${CACHE_KEY})`);
+    } catch (err) {
+      console.error(`[Cache Error]: Failed to set cache: ${err.message}`);
+    }
+  }
+
   res.status(200).json({
     success: true,
+    source: 'database',
     count: items.length,
     data: items
   });
@@ -30,7 +80,7 @@ const getItems = (req, res) => {
 /**
  * Get single item by ID
  */
-const getItemById = (req, res, next) => {
+const getItemById = (req, res) => {
   const item = items.find(i => i.id === req.params.id);
   
   if (!item) {
@@ -47,9 +97,9 @@ const getItemById = (req, res, next) => {
 };
 
 /**
- * Create a new item
+ * Create a new item (invalidates cache)
  */
-const createItem = (req, res) => {
+const createItem = async (req, res) => {
   const { name, description } = req.body;
 
   if (!name) {
@@ -69,6 +119,9 @@ const createItem = (req, res) => {
 
   items.push(newItem);
 
+  // Invalidate cache since database state changed
+  await invalidateCache();
+
   res.status(201).json({
     success: true,
     message: 'Item created successfully',
@@ -77,9 +130,9 @@ const createItem = (req, res) => {
 };
 
 /**
- * Update an existing item
+ * Update an existing item (invalidates cache)
  */
-const updateItem = (req, res) => {
+const updateItem = async (req, res) => {
   const itemIndex = items.findIndex(i => i.id === req.params.id);
 
   if (itemIndex === -1) {
@@ -96,6 +149,9 @@ const updateItem = (req, res) => {
   if (description !== undefined) items[itemIndex].description = description;
   items[itemIndex].updatedAt = new Date().toISOString();
 
+  // Invalidate cache since database state changed
+  await invalidateCache();
+
   res.status(200).json({
     success: true,
     message: 'Item updated successfully',
@@ -104,9 +160,9 @@ const updateItem = (req, res) => {
 };
 
 /**
- * Delete an item
+ * Delete an item (invalidates cache)
  */
-const deleteItem = (req, res) => {
+const deleteItem = async (req, res) => {
   const itemIndex = items.findIndex(i => i.id === req.params.id);
 
   if (itemIndex === -1) {
@@ -117,6 +173,9 @@ const deleteItem = (req, res) => {
   }
 
   const deletedItem = items.splice(itemIndex, 1)[0];
+
+  // Invalidate cache since database state changed
+  await invalidateCache();
 
   res.status(200).json({
     success: true,

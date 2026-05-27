@@ -1,6 +1,6 @@
 # AWS Backend Test API & Playground
 
-A clean, modular Express API built to demonstrate and learn AWS deployment strategies. This version includes an interactive **API Playground UI** served directly from the root route (`/`) of the server and complete **Docker** support.
+A clean, modular Express API built to demonstrate and learn AWS deployment strategies. This version includes an interactive **API Playground UI** served directly from the root route (`/`), interactive **Swagger UI** docs (`/api-docs`), and multi-container orchestrations using **Docker Compose** with **Redis Caching**.
 
 ---
 
@@ -8,21 +8,24 @@ A clean, modular Express API built to demonstrate and learn AWS deployment strat
 ```
 aws-backend-test/
 ├── config/
-│   └── environment.js        # Configures port, node env, and dotenv
+│   ├── environment.js        # Configures port, node env, and dotenv
+│   ├── redis.js              # Redis cache server connection setup
+│   └── swagger.js            # Swagger API documentation definition
 ├── controllers/
-│   └── item.controller.js    # Business logic for items (in-memory CRUD)
+│   └── item.controller.js    # Business logic for items with Redis Caching
 ├── middlewares/
 │   └── errorHandler.js       # Handles 404 routes and global application errors
 ├── public/
 │   └── index.html            # Statically served API Playground dashboard UI
 ├── routes/
-│   ├── health.routes.js      # Health check and info endpoints
+│   ├── health.routes.js      # Health check (with Redis status) and info endpoints
 │   └── item.routes.js        # Item resource endpoints (CRUD)
-├── app.js                    # Express app setup, CORS, static file routing
+├── app.js                    # Express app setup, CORS, static file routing, Swagger docs
 ├── index.js                  # App entry point (listens on port & handles shutdown)
 ├── package.json              # Project configuration and script runners
 ├── Dockerfile                # Production-optimized Docker container recipe
 ├── .dockerignore             # Excludes unnecessary files from container builds
+├── docker-compose.yml        # Orchestrates Backend and Redis containers
 ├── .env                      # Application environment variables (not committed)
 ├── .gitignore                # Excludes node_modules and .env from Git
 └── README.md                 # Project guide & AWS deployment instructions
@@ -43,42 +46,63 @@ Create a `.env` file at the root:
 PORT=5000
 NODE_ENV=development
 APP_NAME="AWS Deployment Demo API"
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
 ```
 
 ### 3. Run the Development Server
 ```bash
 npm start
 ```
-By default, the server runs on `http://localhost:5000`. You can access the **API Playground UI** by navigating to `http://localhost:5000` in your web browser.
+By default, the server runs on `http://localhost:5000`. 
+- Access the **API Playground UI**: `http://localhost:5000`
+- Access the **Swagger Docs UI**: `http://localhost:5000/api-docs`
+
+*Note: If Redis is offline locally, the app will warn you in the console and dynamically fall back to standard in-memory array operations without crashing.*
 
 ---
 
-## Running with Docker
+## Running with Docker Compose (Multi-Container Setup)
 
-This project comes pre-configured with Docker, making it easy to run locally in a containerized environment or deploy to container services like **AWS ECS** or **AWS App Runner**.
+To run the full stack including the Express backend and Redis cache container, use Docker Compose.
 
-### 1. Build the Docker Image
+### 1. Start Services
+Build and start both services in the background:
 ```bash
-docker build -t aws-backend-test .
+docker-compose up --build -d
 ```
 
-### 2. Run the Docker Container
-Map the container's port `5000` to port `5000` on your host machine:
+### 2. Verify Services are Running
+Check status of the containers:
 ```bash
-docker run -d -p 5000:5000 --name backend-api aws-backend-test
+docker-compose ps
 ```
-You can now access the API Playground UI at `http://localhost:5000`.
+You should see:
+- `backend-container` listening on `0.0.0.0:5000->5000/tcp`
+- `redis-container` listening on `0.0.0.0:6379->6379/tcp`
 
-### 3. Check Logs & Stop Container
-* **View running container logs:**
-  ```bash
-  docker logs -f backend-api
-  ```
-* **Stop and remove container:**
-  ```bash
-  docker stop backend-api
-  docker rm backend-api
-  ```
+Navigating to `http://localhost:5000` will show **Redis Cache: CONNECTED** on the dashboard.
+
+### 3. Check Logs
+View merged live logs for all services:
+```bash
+docker-compose logs -f
+```
+
+### 4. Stop Services
+Stop and remove containers and network attachments:
+```bash
+docker-compose down
+```
+
+---
+
+## Redis Caching Details
+
+- **GET /api/items**: First queries Redis using the key `items`.
+  - **Cache Hit**: Data is returned instantly from Redis (`source: "cache"`).
+  - **Cache Miss**: Data is fetched from database (`source: "database"`), stored in Redis cache, and returned.
+- **POST/PUT/DELETE**: Modifying items triggers cache invalidation (`del("items")`), ensuring the next read gets the freshest database state.
 
 ---
 
@@ -87,24 +111,16 @@ You can now access the API Playground UI at `http://localhost:5000`.
 ### Health & Metadata
 
 #### `GET /`
-Serves the interactive **API Playground UI** (HTML page).
+Serves the interactive **API Playground UI**.
+
+#### `GET /api-docs`
+Serves the interactive **Swagger UI** containing all API operations.
 
 #### `GET /api/info`
 Returns general metadata about the server and running environment as JSON.
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Welcome to the AWS Deployment Demo API!",
-  "environment": "development",
-  "port": 5000,
-  "timestamp": "2026-05-27T09:48:32.123Z",
-  "documentation": "See README.md for endpoint and deployment details"
-}
-```
 
 #### `GET /health`
-Liveness check. Critical for AWS Elastic Load Balancers (ELB), ECS Target Groups, and App Runner health checks to monitor if the container is healthy.
+Liveness check. Critical for AWS load balancing and container health checks.
 * **Response (200 OK):**
 ```json
 {
@@ -113,7 +129,8 @@ Liveness check. Critical for AWS Elastic Load Balancers (ELB), ECS Target Groups
   "timestamp": "2026-05-27T09:48:35.456Z",
   "nodeVersion": "v20.x.x",
   "memoryUsage": { ... },
-  "platform": "linux"
+  "platform": "linux",
+  "redisConnected": true
 }
 ```
 
@@ -121,105 +138,21 @@ Liveness check. Critical for AWS Elastic Load Balancers (ELB), ECS Target Groups
 
 ### Items Resource (CRUD)
 
-#### `GET /api/items`
-Retrieve all items.
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "count": 2,
-  "data": [
-    { "id": "1", "name": "AWS EC2 Instance", "description": "...", "createdAt": "...", "updatedAt": "..." },
-    { "id": "2", "name": "AWS S3 Bucket", "description": "...", "createdAt": "...", "updatedAt": "..." }
-  ]
-}
-```
-
-#### `GET /api/items/:id`
-Retrieve a single item by ID.
-
-#### `POST /api/items`
-Create a new item.
-* **Request Body:**
-```json
-{
-  "name": "AWS Lambda Function",
-  "description": "Serverless compute service"
-}
-```
-
-#### `PUT /api/items/:id`
-Update an existing item.
-* **Request Body:**
-```json
-{
-  "name": "AWS Lambda",
-  "description": "Updated serverless compute service description"
-}
-```
-
-#### `DELETE /api/items/:id`
-Delete an item.
+All items endpoints are standard REST CRUD operations. You can test them using the API Playground, Swagger UI, or curl.
 
 ---
 
-## AWS Deployment Guide
+## AWS Multi-Container Deployment Guide
 
-Here are the three most common and practical ways to deploy this backend to AWS.
+### Deploying Multi-Container to AWS ECS (Elastic Container Service) with Fargate
+This is the standard enterprise way to run `docker-compose` designs on AWS.
 
-### Method 1: AWS Elastic Beanstalk (Recommended for Beginners)
-Elastic Beanstalk manages the provisioning, load balancing, auto-scaling, and health monitoring automatically.
-
-1. **Prepare the Zip:**
-   Zip the contents of your directory (excluding `node_modules` and `.git`):
-   ```bash
-   zip -r archive.zip . -x "node_modules/*" ".git/*"
-   ```
-2. **Create a Beanstalk Application:**
-   - Go to the **Elastic Beanstalk Console** on AWS.
-   - Click **Create Application**.
-   - Set Platform to **Node.js** (choose the recommended Node.js version).
-   - Under **Application code**, select **Upload your code** and upload your `archive.zip`.
-3. **Configure Environment Port:**
-   - Elastic Beanstalk automatically routes incoming port 80 traffic to port 8080 or the port set under `PORT`. Our app reads `process.env.PORT` automatically, so it will bind correctly.
-4. **Health Check Path:**
-   - Under Configuration -> Instances / Load Balancer, set the Health Check HTTP path to `/health` (instead of `/`). This ensures AWS monitors the dedicated health endpoint.
-
----
-
-### Method 2: AWS App Runner (Easiest Container / Git Deployment)
-App Runner connects directly to GitHub and deploys automatically on every push.
-
-1. **Push to GitHub:**
-   Commit and push this code to a public/private GitHub repository.
-2. **Create Service in App Runner Console:**
-   - Select **Source code repository** and connect your GitHub account.
-   - Choose your repository and the deployment branch (e.g. `main`).
-   - Under Deployment settings, select **Automatic**.
-3. **Configure Build & Start:**
-   - Runtime: **Node.js 18** (or your preference).
-   - Build Command: `npm install`
-   - Start Command: `npm start`
-   - Port: `5000`
-4. **Deploy:** Click deploy. AWS will provision a secure HTTPS URL for your API automatically.
-
----
-
-### Method 3: AWS ECS (Elastic Container Service) with Fargate
-Recommended for production docker-based microservices.
-
-1. **Push Image to ECR (Elastic Container Registry):**
-   - Create a repository in AWS ECR.
-   - Authenticate your Docker client and push the built image:
-     ```bash
-     docker tag aws-backend-test:latest <aws_account_id>.dkr.ecr.<region>.amazonaws.com/aws-backend-test:latest
-     docker push <aws_account_id>.dkr.ecr.<region>.amazonaws.com/aws-backend-test:latest
-     ```
-2. **Define Task Definition:**
-   - Create an ECS Task Definition using the Fargate launch type.
-   - Specify the container image URL, set port mappings to container port `5000`.
-   - Add environment variables (like `NODE_ENV=production` and `PORT=5000`).
-3. **Configure ECS Service & Load Balancer:**
-   - Create a Service within your ECS Cluster.
-   - Set up an Application Load Balancer (ALB) mapping listener port `80` to target group port `5000`.
-   - Set target group health check path to `/health`.
+1. **Push Backend Image to ECR:**
+   Create an ECR repository and push the backend docker image.
+2. **ECS Task Definition (Task-Level Compose):**
+   - Create a Task Definition on ECS.
+   - Define **two containers** in the same task:
+     - **Container 1 (backend)**: Set image URL to ECR, map container port `5000`. Add environment variable `REDIS_HOST=localhost` (Because containers inside the same ECS task share the localhost network interface).
+     - **Container 2 (redis)**: Set image to `redis:7-alpine`, map container port `6379`.
+3. **Run Services:**
+   Deploy this task definition inside an ECS Service. AWS will run and scale both containers together.

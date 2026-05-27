@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const config = require('../config/environment');
+const redisClient = require('../config/redis');
 
 /**
  * @route   GET /api/info
@@ -29,7 +30,8 @@ router.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     nodeVersion: process.version,
     memoryUsage: process.memoryUsage(),
-    platform: process.platform
+    platform: process.platform,
+    redisConnected: redisClient.isOpen
   };
 
   try {

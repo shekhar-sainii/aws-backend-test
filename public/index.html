@@ -480,8 +480,13 @@
           <p style="font-size: 0.85rem; color: var(--text-secondary)">Backend deployment sandbox</p>
         </div>
       </div>
-      <div class="badge-aws">
-        <i class="fa-brands fa-aws"></i> Deploy Ready
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <a href="/api-docs" target="_blank" style="text-decoration: none; background: rgba(99, 102, 241, 0.15); border: 1px solid #6366f1; color: #818cf8; padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: background 0.2s;">
+          <i class="fa-solid fa-book"></i> Swagger Docs
+        </a>
+        <div class="badge-aws">
+          <i class="fa-brands fa-aws"></i> Deploy Ready
+        </div>
       </div>
     </header>
 
@@ -520,9 +525,13 @@
             <span class="metric-label">RAM Usage</span>
             <span class="metric-value" id="memory">-</span>
           </div>
-          <div class="metric-item" style="border: none;">
+          <div class="metric-item">
             <span class="metric-label">Node Version</span>
             <span class="metric-value" id="node-ver">-</span>
+          </div>
+          <div class="metric-item" style="border: none;">
+            <span class="metric-label">Redis Cache</span>
+            <span class="metric-value" id="redis-status">-</span>
           </div>
         </div>
 
@@ -648,6 +657,13 @@
         // Format RAM
         const mbUsed = Math.round(data.memoryUsage.rss / 1024 / 1024);
         document.getElementById('memory').innerText = `${mbUsed} MB`;
+
+        // Format Redis status
+        const redisStatusEl = document.getElementById('redis-status');
+        if (redisStatusEl) {
+          redisStatusEl.innerText = data.redisConnected ? 'CONNECTED' : 'DISCONNECTED';
+          redisStatusEl.style.color = data.redisConnected ? 'var(--success)' : 'var(--danger)';
+        }
         
         // Fetch base server configs
         const configRes = await fetch('/api/info');
