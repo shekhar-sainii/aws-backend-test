@@ -101,6 +101,19 @@
       gap: 6px;
     }
 
+    .badge-k8s {
+      background: rgba(50, 109, 230, 0.15);
+      border: 1px solid rgb(50, 109, 230);
+      color: rgb(80, 140, 255);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     /* Dashboard Layout */
     .dashboard-grid {
       display: grid;
@@ -484,6 +497,9 @@
         <a href="/api-docs" target="_blank" style="text-decoration: none; background: rgba(99, 102, 241, 0.15); border: 1px solid #6366f1; color: #818cf8; padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: background 0.2s;">
           <i class="fa-solid fa-book"></i> Swagger Docs
         </a>
+        <div class="badge-k8s" id="k8s-badge" style="display: none;">
+          <i class="fa-solid fa-cubes"></i> Minikube K8s Active
+        </div>
         <div class="badge-aws">
           <i class="fa-brands fa-aws"></i> Deploy Ready
         </div>
@@ -529,9 +545,13 @@
             <span class="metric-label">Node Version</span>
             <span class="metric-value" id="node-ver">-</span>
           </div>
-          <div class="metric-item" style="border: none;">
+          <div class="metric-item">
             <span class="metric-label">Redis Cache</span>
             <span class="metric-value" id="redis-status">-</span>
+          </div>
+          <div class="metric-item" style="border: none;">
+            <span class="metric-label">Cluster Env</span>
+            <span class="metric-value" id="cluster-env" style="font-weight: 600;">-</span>
           </div>
         </div>
 
@@ -663,6 +683,19 @@
         if (redisStatusEl) {
           redisStatusEl.innerText = data.redisConnected ? 'CONNECTED' : 'DISCONNECTED';
           redisStatusEl.style.color = data.redisConnected ? 'var(--success)' : 'var(--danger)';
+        }
+
+        // Format Cluster Environment
+        const clusterEnvEl = document.getElementById('cluster-env');
+        if (clusterEnvEl) {
+          clusterEnvEl.innerText = data.runningOnK8s ? 'Kubernetes (Minikube)' : 'Local / Docker-Compose';
+          clusterEnvEl.style.color = data.runningOnK8s ? '#60a5fa' : 'var(--text-secondary)';
+        }
+
+        // Show Kubernetes badge if running on K8s
+        const k8sBadge = document.getElementById('k8s-badge');
+        if (k8sBadge) {
+          k8sBadge.style.display = data.runningOnK8s ? 'flex' : 'none';
         }
         
         // Fetch base server configs

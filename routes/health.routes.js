@@ -31,7 +31,8 @@ router.get('/health', (req, res) => {
     nodeVersion: process.version,
     memoryUsage: process.memoryUsage(),
     platform: process.platform,
-    redisConnected: redisClient.isOpen
+    redisConnected: redisClient.isOpen,
+    runningOnK8s: config.IS_K8S
   };
 
   try {

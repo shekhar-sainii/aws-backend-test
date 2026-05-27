@@ -1,6 +1,6 @@
 # AWS Backend Test API & Playground
 
-A clean, modular Express API built to demonstrate and learn AWS deployment strategies. This version includes an interactive **API Playground UI** served directly from the root route (`/`), interactive **Swagger UI** docs (`/api-docs`), and multi-container orchestrations using **Docker Compose** with **Redis Caching**.
+A clean, modular Express API built to demonstrate and learn AWS deployment strategies. This version includes an interactive **API Playground UI** served directly from the root route (`/`), interactive **Swagger UI** docs (`/api-docs`), multi-container orchestrations using **Docker Compose** with **Redis Caching**, and **Kubernetes (Minikube)** manifests.
 
 ---
 
@@ -13,6 +13,11 @@ aws-backend-test/
 │   └── swagger.js            # Swagger API documentation definition
 ├── controllers/
 │   └── item.controller.js    # Business logic for items with Redis Caching
+├── k8s/
+│   ├── deployment.yaml       # Kubernetes backend deployment manifest (2 replicas)
+│   ├── service.yaml          # Kubernetes backend NodePort service
+│   ├── redis-deployment.yaml # Kubernetes Redis deployment manifest
+│   └── redis-service.yaml    # Kubernetes Redis ClusterIP service
 ├── middlewares/
 │   └── errorHandler.js       # Handles 404 routes and global application errors
 ├── public/
@@ -28,7 +33,7 @@ aws-backend-test/
 ├── docker-compose.yml        # Orchestrates Backend and Redis containers
 ├── .env                      # Application environment variables (not committed)
 ├── .gitignore                # Excludes node_modules and .env from Git
-└── README.md                 # Project guide & AWS deployment instructions
+└── README.md                 # Project guide & AWS/Kubernetes deployment instructions
 ```
 
 ---
@@ -69,13 +74,13 @@ To run the full stack including the Express backend and Redis cache container, u
 ### 1. Start Services
 Build and start both services in the background:
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 ### 2. Verify Services are Running
 Check status of the containers:
 ```bash
-docker-compose ps
+docker ps
 ```
 You should see:
 - `backend-container` listening on `0.0.0.0:5000->5000/tcp`
@@ -83,16 +88,65 @@ You should see:
 
 Navigating to `http://localhost:5000` will show **Redis Cache: CONNECTED** on the dashboard.
 
-### 3. Check Logs
-View merged live logs for all services:
-```bash
-docker-compose logs -f
-```
-
-### 4. Stop Services
+### 3. Stop Services
 Stop and remove containers and network attachments:
 ```bash
-docker-compose down
+docker compose down
+```
+
+---
+
+## Running with Kubernetes (Minikube)
+
+You can deploy the complete stack onto a local Kubernetes cluster using the manifests in the `k8s/` directory.
+
+### 1. Point Docker to Minikube's Docker daemon
+Run this command in your terminal so that Docker builds images directly inside the Minikube virtual machine:
+```bash
+eval $(minikube docker-env)
+```
+
+### 2. Build the Backend Image
+Build the backend image inside Minikube:
+```bash
+docker build -t aws-backend-test:latest .
+```
+
+### 3. Apply the Manifests
+Create the deployments and services in the cluster:
+```bash
+kubectl apply -f k8s/
+```
+
+### 4. Verify Deployments
+Ensure all pods are running successfully:
+```bash
+kubectl get pods
+```
+You should see:
+- 1 Pod for `redis-deployment-...`
+- 2 Pods for `backend-deployment-...` (running 2 replicas for load balancing)
+
+Verify services:
+```bash
+kubectl get svc
+```
+Ensure `redis-service` (ClusterIP) and `backend-service` (NodePort) are active.
+
+### 5. Access the API Playground UI
+To open the backend application in your default browser, run:
+```bash
+minikube service backend-service
+```
+Or retrieve the direct NodePort URL:
+```bash
+minikube service backend-service --url
+```
+
+### 6. Clean Up Kubernetes Services
+To remove the deployments and services:
+```bash
+kubectl delete -f k8s/
 ```
 
 ---
@@ -133,12 +187,6 @@ Liveness check. Critical for AWS load balancing and container health checks.
   "redisConnected": true
 }
 ```
-
----
-
-### Items Resource (CRUD)
-
-All items endpoints are standard REST CRUD operations. You can test them using the API Playground, Swagger UI, or curl.
 
 ---
 
