@@ -3,10 +3,10 @@ const router = express.Router();
 const config = require('../config/environment');
 
 /**
- * @route   GET /
+ * @route   GET /api/info
  * @desc    Welcome / Info endpoint
  */
-router.get('/', (req, res) => {
+router.get('/api/info', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Welcome to the AWS Deployment Demo API!',

@@ -8,6 +8,7 @@ const app = express();
 // Standard Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
 
 // Simple Custom CORS Middleware to allow cross-origin requests
 app.use((req, res, next) => {

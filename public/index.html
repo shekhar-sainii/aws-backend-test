@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Deployment Demo - API Playground</title>
+  <!-- Google Fonts - Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: rgba(22, 28, 45, 0.6);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary-gradient: linear-gradient(135deg, #6366f1, #a855f7);
+      --accent-gradient: linear-gradient(135deg, #ff007f, #7f00ff);
+      --text-color: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      --accent: #a855f7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 40%);
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 1.5rem;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      background: var(--primary-gradient);
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.5rem;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #ffffff, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge-aws {
+      background: rgba(255, 153, 0, 0.15);
+      border: 1px solid rgb(255, 153, 0);
+      color: rgb(255, 153, 0);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Dashboard Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.8fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Glassmorphic Cards */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+
+    .card-title i {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Server Status Details */
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.online {
+      background-color: var(--success);
+      box-shadow: 0 0 10px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    .dot.offline {
+      background-color: var(--danger);
+      box-shadow: 0 0 10px var(--danger);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .metric-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .metric-item {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      padding-bottom: 0.6rem;
+    }
+
+    .metric-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .metric-value {
+      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+    }
+
+    /* CRUD Area */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
+      font-weight: 500;
+    }
+
+    input, textarea {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      width: 100%;
+      background: var(--primary-gradient);
+      color: white;
+      border: none;
+      padding: 0.75rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      color: var(--text-color);
+      margin-top: 0.5rem;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Items List Display */
+    .items-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 1rem;
+      padding-right: 5px;
+    }
+
+    /* Custom Scrollbar */
+    .items-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .items-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .items-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .item-card {
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      transition: border-color 0.2s;
+    }
+
+    .item-card:hover {
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-name {
+      font-weight: 600;
+      color: #fff;
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .item-desc {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .item-id {
+      display: inline-block;
+      font-size: 0.75rem;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .icon-btn.edit-btn:hover {
+      color: var(--accent);
+    }
+
+    .icon-btn.delete-btn:hover {
+      color: var(--danger);
+    }
+
+    /* Terminal Console */
+    .console-card {
+      grid-column: 1 / span 2;
+      margin-top: 1rem;
+      background: #060913;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.2rem;
+    }
+
+    @media (max-width: 900px) {
+      .console-card {
+        grid-column: 1;
+      }
+    }
+
+    .console-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+
+    .console-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .console-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .console-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .console-body {
+      background: #03050a;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #38bdf8;
+      max-height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .console-command {
+      color: #a855f7;
+      margin-bottom: 0.5rem;
+    }
+
+    .console-response {
+      color: #10b981;
+      margin-bottom: 1rem;
+    }
+
+    /* Modal for Update */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(6, 9, 19, 0.8);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      width: 90%;
+      max-width: 450px;
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+    }
+
+    .modal-close {
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo-area">
+        <div class="logo-icon">
+          <i class="fa-solid fa-server"></i>
+        </div>
+        <div>
+          <h1>API Playground</h1>
+          <p style="font-size: 0.85rem; color: var(--text-secondary)">Backend deployment sandbox</p>
+        </div>
+      </div>
+      <div class="badge-aws">
+        <i class="fa-brands fa-aws"></i> Deploy Ready
+      </div>
+    </header>
+
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+      
+      <!-- Left Column: Metrics & Server status -->
+      <div class="card">
+        <div class="card-title">
+          <i class="fa-solid fa-gauge-high"></i> Server Status
+        </div>
+        
+        <div class="status-indicator">
+          <span class="dot online" id="status-dot"></span>
+          <span id="status-text">HEALTHY</span>
+        </div>
+
+        <div class="metric-list">
+          <div class="metric-item">
+            <span class="metric-label">Uptime</span>
+            <span class="metric-value" id="uptime">-</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Environment</span>
+            <span class="metric-value" id="env" style="text-transform: capitalize;">-</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Port</span>
+            <span class="metric-value" id="port">-</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Platform</span>
+            <span class="metric-value" id="platform">-</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">RAM Usage</span>
+            <span class="metric-value" id="memory">-</span>
+          </div>
+          <div class="metric-item" style="border: none;">
+            <span class="metric-label">Node Version</span>
+            <span class="metric-value" id="node-ver">-</span>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" onclick="fetchHealth()" style="margin-top: 1.5rem">
+          <i class="fa-solid fa-rotate"></i> Refresh Metrics
+        </button>
+      </div>
+
+      <!-- Right Column: CRUD Playground -->
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        
+        <!-- Add Item -->
+        <div class="card">
+          <div class="card-title">
+            <i class="fa-solid fa-plus-circle"></i> Create New Resource
+          </div>
+          <form id="create-form" onsubmit="handleCreate(event)">
+            <div class="form-group">
+              <label for="name">Resource Name</label>
+              <input type="text" id="name" placeholder="e.g. AWS DynamoDB" required>
+            </div>
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description" rows="2" placeholder="e.g. Key-value and document database..."></textarea>
+            </div>
+            <button type="submit" class="btn">
+              <i class="fa-solid fa-paper-plane"></i> Submit POST Request
+            </button>
+          </form>
+        </div>
+
+        <!-- Items List -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 0.5rem">
+            <i class="fa-solid fa-database"></i> Live Database Sandbox (In-Memory)
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.2rem">
+            Updates and creations in this dashboard interact with the backend `/api/items` endpoint.
+          </p>
+          <div class="items-container" id="items-list">
+            <!-- Items loaded dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Console / Command Logger -->
+      <div class="console-card">
+        <div class="console-header">
+          <div class="console-title">
+            <i class="fa-solid fa-terminal"></i> Curl Command Log (Equivalent Commands)
+          </div>
+          <div class="console-dots">
+            <span class="console-dot" style="background-color: var(--danger)"></span>
+            <span class="console-dot" style="background-color: #eab308"></span>
+            <span class="console-dot" style="background-color: var(--success)"></span>
+          </div>
+        </div>
+        <div class="console-body" id="console-output">Initializing Dashboard logs...</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal for Updating Item -->
+  <div class="modal" id="update-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-weight: 600">Update Item Details</h3>
+        <span class="modal-close" onclick="closeModal()"><i class="fa-solid fa-times"></i></span>
+      </div>
+      <form id="update-form" onsubmit="handleUpdate(event)">
+        <input type="hidden" id="update-id">
+        <div class="form-group">
+          <label for="update-name">Resource Name</label>
+          <input type="text" id="update-name" required>
+        </div>
+        <div class="form-group">
+          <label for="update-description">Description</label>
+          <textarea id="update-description" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn">
+          <i class="fa-solid fa-save"></i> Save Changes (PUT)
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Javascript Playground Logic -->
+  <script>
+    // Console log helpers
+    const logConsole = (command, response) => {
+      const consoleOutput = document.getElementById('console-output');
+      const time = new Date().toLocaleTimeString();
+      
+      const logBlock = document.createElement('div');
+      logBlock.innerHTML = `
+<span style="color: #6b7280">[${time}]</span> <span class="console-command">$ ${command}</span>
+<span class="console-response">${JSON.stringify(response, null, 2)}</span>
+      `;
+      consoleOutput.prepend(logBlock);
+    };
+
+    // Load server status / health details
+    async function fetchHealth() {
+      try {
+        const res = await fetch('/health');
+        const data = await res.json();
+        
+        document.getElementById('status-dot').className = 'dot online';
+        document.getElementById('status-text').innerText = 'HEALTHY';
+        document.getElementById('status-text').style.color = 'var(--success)';
+        
+        // Format uptime
+        const hrs = Math.floor(data.uptime / 3600);
+        const mins = Math.floor((data.uptime % 3600) / 60);
+        const secs = Math.floor(data.uptime % 60);
+        document.getElementById('uptime').innerText = `${hrs}h ${mins}m ${secs}s`;
+        
+        document.getElementById('platform').innerText = data.platform;
+        document.getElementById('node-ver').innerText = data.nodeVersion;
+        
+        // Format RAM
+        const mbUsed = Math.round(data.memoryUsage.rss / 1024 / 1024);
+        document.getElementById('memory').innerText = `${mbUsed} MB`;
+        
+        // Fetch base server configs
+        const configRes = await fetch('/api/info');
+        if (configRes.headers.get('content-type').includes('application/json')) {
+          const configData = await configRes.json();
+          document.getElementById('env').innerText = configData.environment;
+          document.getElementById('port').innerText = configData.port;
+        } else {
+          // If fallback route is index.html
+          document.getElementById('env').innerText = 'production';
+          document.getElementById('port').innerText = window.location.port || '80';
+        }
+        
+      } catch (err) {
+        document.getElementById('status-dot').className = 'dot offline';
+        document.getElementById('status-text').innerText = 'UNREACHABLE';
+        document.getElementById('status-text').style.color = 'var(--danger)';
+        console.error('Error loading health details', err);
+      }
+    }
+
+    // Fetch and render all CRUD items
+    async function fetchItems() {
+      const cmd = "curl -s http://localhost:" + (window.location.port || "80") + "/api/items";
+      try {
+        const res = await fetch('/api/items');
+        const data = await res.json();
+        
+        const listEl = document.getElementById('items-list');
+        listEl.innerHTML = '';
+        
+        if (data.data.length === 0) {
+          listEl.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem 0">No items in the database yet.</p>';
+          return;
+        }
+        
+        data.data.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.innerHTML = `
+            <div class="item-info">
+              <div class="item-name">${item.name}</div>
+              <div class="item-desc">${item.description || 'No description provided.'}</div>
+              <div class="item-id">ID: ${item.id}</div>
+            </div>
+            <div class="item-actions">
+              <button class="icon-btn edit-btn" onclick="openUpdateModal('${item.id}', '${item.name.replace(/'/g, "\\'")}', '${(item.description || '').replace(/'/g, "\\'")}')" title="Edit Item">
+                <i class="fa-solid fa-edit"></i>
+              </button>
+              <button class="icon-btn delete-btn" onclick="handleDelete('${item.id}')" title="Delete Item">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          `;
+          listEl.appendChild(card);
+        });
+        
+        logConsole(cmd, data);
+      } catch (err) {
+        console.error('Error fetching items', err);
+        logConsole(cmd, { success: false, error: err.message });
+      }
+    }
+
+    // POST: Create item
+    async function handleCreate(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const description = document.getElementById('description').value;
+      
+      const payload = { name, description };
+      const cmd = `curl -s -X POST -H "Content-Type: application/json" -d '${JSON.stringify(payload)}' http://localhost:${window.location.port || "80"}/api/items`;
+
+      try {
+        const res = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        logConsole(cmd, data);
+        
+        // Reset form
+        document.getElementById('name').value = '';
+        document.getElementById('description').value = '';
+        
+        // Reload list and health
+        fetchItems();
+        fetchHealth();
+      } catch (err) {
+        logConsole(cmd, { success: false, error: err.message });
+      }
+    }
+
+    // DELETE: Remove item
+    async function handleDelete(id) {
+      if (!confirm('Are you sure you want to delete this resource?')) return;
+      
+      const cmd = `curl -s -X DELETE http://localhost:${window.location.port || "80"}/api/items/${id}`;
+      try {
+        const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        
+        logConsole(cmd, data);
+        fetchItems();
+        fetchHealth();
+      } catch (err) {
+        logConsole(cmd, { success: false, error: err.message });
+      }
+    }
+
+    // PUT: Update item
+    async function handleUpdate(e) {
+      e.preventDefault();
+      const id = document.getElementById('update-id').value;
+      const name = document.getElementById('update-name').value;
+      const description = document.getElementById('update-description').value;
+      
+      const payload = { name, description };
+      const cmd = `curl -s -X PUT -H "Content-Type: application/json" -d '${JSON.stringify(payload)}' http://localhost:${window.location.port || "80"}/api/items/${id}`;
+
+      try {
+        const res = await fetch(`/api/items/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        logConsole(cmd, data);
+        closeModal();
+        fetchItems();
+        fetchHealth();
+      } catch (err) {
+        logConsole(cmd, { success: false, error: err.message });
+      }
+    }
+
+    // Modal helpers
+    function openUpdateModal(id, name, desc) {
+      document.getElementById('update-id').value = id;
+      document.getElementById('update-name').value = name;
+      document.getElementById('update-description').value = desc;
+      document.getElementById('update-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('update-modal').style.display = 'none';
+    }
+
+    // Initial load
+    window.onload = () => {
+      fetchHealth();
+      fetchItems();
+      
+      // Auto refresh status every 15 seconds
+      setInterval(fetchHealth, 15000);
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Ignore local node packages
+node_modules/
+
+# Ignore sensitive env secrets
+.env
+.env.*
+
+# Ignore git folder
+.git/
+.gitignore
+
+# Ignore docker files themselves
+Dockerfile
+.dockerignore
+
+# Ignore logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore docs and metadata
+README.md
+LICENSE
+.DS_Store
+Thumbs.db
