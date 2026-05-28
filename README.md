@@ -125,7 +125,7 @@ kubectl get pods
 ```
 You should see:
 - 1 Pod for `redis-deployment-...`
-- 2 Pods for `backend-deployment-...` (running 2 replicas for load balancing)
+- 3 Pods for `backend-deployment-...` (running 3 replicas for load balancing)
 
 Verify services:
 ```bash

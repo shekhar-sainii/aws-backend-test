@@ -114,6 +114,25 @@
       gap: 6px;
     }
 
+    @keyframes flash-active {
+      0% {
+        background: rgba(99, 102, 241, 0.35);
+        border-color: #6366f1;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+        transform: scale(1.02);
+      }
+      100% {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.06);
+        box-shadow: none;
+        transform: scale(1);
+      }
+    }
+    
+    .pod-active-flash {
+      animation: flash-active 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
     /* Dashboard Layout */
     .dashboard-grid {
       display: grid;
@@ -510,54 +529,88 @@
     <div class="dashboard-grid">
       
       <!-- Left Column: Metrics & Server status -->
-      <div class="card">
-        <div class="card-title">
-          <i class="fa-solid fa-gauge-high"></i> Server Status
-        </div>
-        
-        <div class="status-indicator">
-          <span class="dot online" id="status-dot"></span>
-          <span id="status-text">HEALTHY</span>
+      <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <div class="card">
+          <div class="card-title">
+            <i class="fa-solid fa-gauge-high"></i> Server Status
+          </div>
+          
+          <div class="status-indicator">
+            <span class="dot online" id="status-dot"></span>
+            <span id="status-text">HEALTHY</span>
+          </div>
+
+          <div class="metric-list">
+            <div class="metric-item">
+              <span class="metric-label">Uptime</span>
+              <span class="metric-value" id="uptime">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Environment</span>
+              <span class="metric-value" id="env" style="text-transform: capitalize;">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Port</span>
+              <span class="metric-value" id="port">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Platform</span>
+              <span class="metric-value" id="platform">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">RAM Usage</span>
+              <span class="metric-value" id="memory">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Node Version</span>
+              <span class="metric-value" id="node-ver">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Redis Cache</span>
+              <span class="metric-value" id="redis-status">-</span>
+            </div>
+            <div class="metric-item" style="border: none;">
+              <span class="metric-label">Cluster Env</span>
+              <span class="metric-value" id="cluster-env" style="font-weight: 600;">-</span>
+            </div>
+          </div>
+
+          <button class="btn btn-secondary" onclick="fetchHealth()" style="margin-top: 1.5rem">
+            <i class="fa-solid fa-rotate"></i> Refresh Metrics
+          </button>
         </div>
 
-        <div class="metric-list">
-          <div class="metric-item">
-            <span class="metric-label">Uptime</span>
-            <span class="metric-value" id="uptime">-</span>
+        <!-- Load Balancer Sandbox -->
+        <div class="card">
+          <div class="card-title">
+            <i class="fa-solid fa-network-wired"></i> Load Balancer Sandbox
           </div>
-          <div class="metric-item">
-            <span class="metric-label">Environment</span>
-            <span class="metric-value" id="env" style="text-transform: capitalize;">-</span>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem">
+            Send requests to `/api/load-balancer` to test traffic routing across Kubernetes replicas.
+          </p>
+
+          <button class="btn" onclick="sendLoadBalancerRequest()" style="width: 100%; margin-bottom: 1.5rem; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+            <i class="fa-solid fa-paper-plane"></i> Send Request (Hits Load Balancer)
+          </button>
+
+          <div style="margin-bottom: 1.2rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem;">
+              <span style="color: var(--text-secondary);">Last Routed Pod:</span>
+              <span id="lb-last-pod" style="font-family: monospace; font-weight: bold; color: #818cf8;">None</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+              <span style="color: var(--text-secondary);">Total Global Visits:</span>
+              <span id="lb-total-visits" style="font-weight: bold; color: var(--success);">-</span>
+            </div>
           </div>
-          <div class="metric-item">
-            <span class="metric-label">Port</span>
-            <span class="metric-value" id="port">-</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-label">Platform</span>
-            <span class="metric-value" id="platform">-</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-label">RAM Usage</span>
-            <span class="metric-value" id="memory">-</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-label">Node Version</span>
-            <span class="metric-value" id="node-ver">-</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-label">Redis Cache</span>
-            <span class="metric-value" id="redis-status">-</span>
-          </div>
-          <div class="metric-item" style="border: none;">
-            <span class="metric-label">Cluster Env</span>
-            <span class="metric-value" id="cluster-env" style="font-weight: 600;">-</span>
+
+          <div class="pod-visualization" id="pod-vis-container" style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1rem;">
+            <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.2rem; display: block;">Discovered Replicas (Active)</span>
+            <div id="pod-cards-list" style="display: flex; flex-direction: column; gap: 8px;">
+              <p style="font-size: 0.8rem; color: var(--text-secondary); font-style: italic; margin: 0;">No pods registered yet. Send a request to discover!</p>
+            </div>
           </div>
         </div>
-
-        <button class="btn btn-secondary" onclick="fetchHealth()" style="margin-top: 1.5rem">
-          <i class="fa-solid fa-rotate"></i> Refresh Metrics
-        </button>
       </div>
 
       <!-- Right Column: CRUD Playground -->
@@ -654,6 +707,68 @@
       `;
       consoleOutput.prepend(logBlock);
     };
+
+    // Keep track of discovered Kubernetes pods/hosts
+    const discoveredPods = new Set();
+
+    async function sendLoadBalancerRequest() {
+      try {
+        const res = await fetch('/api/load-balancer');
+        const data = await res.json();
+        
+        // Log to console
+        logConsole('curl -s http://localhost:5000/api/load-balancer', data);
+
+        // Update textual metrics
+        document.getElementById('lb-last-pod').innerText = data.hostname;
+        document.getElementById('lb-total-visits').innerText = data.visits;
+
+        // Manage pod list
+        if (!discoveredPods.has(data.hostname)) {
+          discoveredPods.add(data.hostname);
+          renderPodCards();
+        }
+
+        // Highlight/flash the active pod card
+        const cardId = `pod-${data.hostname.replace(/[^a-zA-Z0-9]/g, '-')}`;
+        const activeCard = document.getElementById(cardId);
+        if (activeCard) {
+          activeCard.classList.remove('pod-active-flash');
+          // Trigger reflow to restart animation
+          void activeCard.offsetWidth;
+          activeCard.classList.add('pod-active-flash');
+        }
+      } catch (err) {
+        logConsole('curl -s http://localhost:5000/api/load-balancer', { error: err.message });
+      }
+    }
+
+    function renderPodCards() {
+      const container = document.getElementById('pod-cards-list');
+      if (!container) return;
+
+      if (discoveredPods.size === 0) {
+        container.innerHTML = `<p style="font-size: 0.8rem; color: var(--text-secondary); font-style: italic; margin: 0;">No pods registered yet. Send a request to discover!</p>`;
+        return;
+      }
+
+      container.innerHTML = '';
+      discoveredPods.forEach(pod => {
+        const cardId = `pod-${pod.replace(/[^a-zA-Z0-9]/g, '-')}`;
+        const card = document.createElement('div');
+        card.className = 'pod-card';
+        card.id = cardId;
+        card.style = 'display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 0.5rem 0.75rem; border-radius: 8px; transition: all 0.3s; margin-bottom: 0.5rem;';
+        card.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-cube" style="color: #60a5fa;"></i>
+            <span style="font-family: monospace; font-size: 0.8rem; color: var(--text-primary);">${pod}</span>
+          </div>
+          <span style="font-size: 0.7rem; background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); padding: 2px 6px; border-radius: 4px; font-weight: 600;">ACTIVE</span>
+        `;
+        container.appendChild(card);
+      });
+    }
 
     // Load server status / health details
     async function fetchHealth() {

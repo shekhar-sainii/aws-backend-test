@@ -95,6 +95,30 @@ const swaggerDefinition = {
         }
       }
     },
+    '/api/load-balancer': {
+      get: {
+        tags: ['System'],
+        summary: 'Demo load balancing endpoint',
+        description: 'Returns the host container/pod hostname and the total visits count. Used to demonstrate load balancing routing across multiple cluster replicas.',
+        responses: {
+          200: {
+            description: 'Load balancing is working',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', example: 'Load Balancing Working 🚀' },
+                    hostname: { type: 'string', example: 'backend-deployment-77d95d5bb4-k7rds' },
+                    visits: { type: 'integer', example: 42 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     '/api/items': {
       get: {
         tags: ['Items CRUD'],

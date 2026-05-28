@@ -3,6 +3,9 @@ const router = express.Router();
 const config = require('../config/environment');
 const redisClient = require('../config/redis');
 
+const os = require('os');
+let localVisits = 0;
+
 /**
  * @route   GET /api/info
  * @desc    Welcome / Info endpoint
@@ -15,6 +18,32 @@ router.get('/api/info', (req, res) => {
     port: config.PORT,
     timestamp: new Date().toISOString(),
     documentation: 'See README.md for endpoint and deployment details'
+  });
+});
+
+/**
+ * @route   GET /api/load-balancer
+ * @desc    Load balancing demo endpoint returning hostname and request count
+ */
+router.get('/api/load-balancer', async (req, res) => {
+  let visits = 0;
+  try {
+    if (redisClient.isOpen) {
+      visits = await redisClient.incr('global_visits');
+    } else {
+      localVisits++;
+      visits = localVisits;
+    }
+  } catch (err) {
+    console.error('Error incrementing global_visits in Redis:', err.message);
+    localVisits++;
+    visits = localVisits;
+  }
+
+  res.status(200).json({
+    message: "Load Balancing Working 🚀",
+    hostname: os.hostname(),
+    visits
   });
 });
 
