@@ -1,4 +1,5 @@
 const redisClient = require('../config/redis');
+const kafkaConfig = require('../config/kafka');
 
 const CACHE_KEY = 'items';
 
@@ -121,6 +122,13 @@ const createItem = async (req, res) => {
 
   // Invalidate cache since database state changed
   await invalidateCache();
+
+  // Publish event to Kafka (non-blocking call)
+  kafkaConfig.sendEvent('item-events', newItem.id, {
+    eventType: 'ITEM_CREATED',
+    timestamp: new Date().toISOString(),
+    item: newItem
+  });
 
   res.status(201).json({
     success: true,

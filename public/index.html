@@ -611,6 +611,26 @@
             </div>
           </div>
         </div>
+
+        <!-- Kafka Event Stream Monitor -->
+        <div class="card">
+          <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <i class="fa-solid fa-server" style="color: #10b981;"></i> Kafka Event Monitor
+            </div>
+            <div style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px;">
+              <span class="dot online" style="background-color: #10b981; width: 6px; height: 6px;"></span>
+              <span style="color: var(--text-secondary); font-weight: 500;">Consumer Active</span>
+            </div>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem">
+            Asynchronous event stream consumed from Kafka topic <code style="color: #34d399; font-family: monospace;">item-events</code>.
+          </p>
+
+          <div id="kafka-events-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+            <p style="font-size: 0.8rem; color: var(--text-secondary); font-style: italic; margin: 0;">No Kafka events captured yet. Create an item to produce events!</p>
+          </div>
+        </div>
       </div>
 
       <!-- Right Column: CRUD Playground -->
@@ -951,6 +971,57 @@
       }
     }
 
+    // Fetch recent Kafka events from Redis
+    async function fetchKafkaEvents() {
+      try {
+        const res = await fetch('/api/kafka-events');
+        const data = await res.json();
+        if (data.success) {
+          renderKafkaEvents(data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching Kafka events:', err.message);
+      }
+    }
+
+    function renderKafkaEvents(events) {
+      const container = document.getElementById('kafka-events-list');
+      if (!container) return;
+
+      if (!events || events.length === 0) {
+        container.innerHTML = `<p style="font-size: 0.8rem; color: var(--text-secondary); font-style: italic; margin: 0;">No Kafka events captured yet. Create an item to produce events!</p>`;
+        return;
+      }
+
+      container.innerHTML = '';
+      events.forEach(evt => {
+        const item = evt.payload && evt.payload.item ? evt.payload.item : {};
+        const eventBox = document.createElement('div');
+        eventBox.style = 'background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.4; margin-bottom: 0.5rem;';
+        
+        const time = new Date(evt.receivedAt).toLocaleTimeString();
+        eventBox.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <span style="font-weight: 700; color: #34d399; font-size: 0.75rem; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.2); padding: 1px 6px; border-radius: 4px;">
+              ${evt.payload.eventType || 'EVENT'}
+            </span>
+            <span style="color: var(--text-secondary); font-size: 0.7rem;">${time}</span>
+          </div>
+          <div style="color: var(--text-primary); font-weight: 600; margin-bottom: 0.25rem;">
+            ${item.name || 'Unknown Item'} <span style="font-weight: normal; color: var(--text-secondary); font-size: 0.75rem;">(ID: ${evt.key})</span>
+          </div>
+          <div style="color: var(--text-secondary); font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.4rem;">
+            ${item.description || 'No description'}
+          </div>
+          <div style="display: flex; gap: 8px; font-family: monospace; font-size: 0.65rem; color: var(--text-secondary); border-top: 1px solid rgba(255,255,255,0.04); padding-top: 0.4rem;">
+            <span>Partition: <strong style="color: var(--text-primary);">${evt.partition}</strong></span>
+            <span>Offset: <strong style="color: var(--text-primary);">${evt.offset}</strong></span>
+          </div>
+        `;
+        container.appendChild(eventBox);
+      });
+    }
+
     // Modal helpers
     function openUpdateModal(id, name, desc) {
       document.getElementById('update-id').value = id;
@@ -967,9 +1038,13 @@
     window.onload = () => {
       fetchHealth();
       fetchItems();
+      fetchKafkaEvents();
       
       // Auto refresh status every 15 seconds
       setInterval(fetchHealth, 15000);
+      
+      // Auto refresh Kafka event monitor list every 2 seconds
+      setInterval(fetchKafkaEvents, 2000);
     };
   </script>
 </body>

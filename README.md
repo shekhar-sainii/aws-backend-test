@@ -9,6 +9,7 @@ A clean, modular Express API built to demonstrate and learn AWS deployment strat
 aws-backend-test/
 ├── config/
 │   ├── environment.js        # Configures port, node env, and dotenv
+│   ├── kafka.js              # Kafka client connection and publishing setup
 │   ├── redis.js              # Redis cache server connection setup
 │   └── swagger.js            # Swagger API documentation definition
 ├── controllers/
@@ -26,11 +27,13 @@ aws-backend-test/
 │   ├── health.routes.js      # Health check (with Redis status) and info endpoints
 │   └── item.routes.js        # Item resource endpoints (CRUD)
 ├── app.js                    # Express app setup, CORS, static file routing, Swagger docs
+├── consumer.js               # Standalone consumer worker subscribing to events
 ├── index.js                  # App entry point (listens on port & handles shutdown)
 ├── package.json              # Project configuration and script runners
 ├── Dockerfile                # Production-optimized Docker container recipe
 ├── .dockerignore             # Excludes unnecessary files from container builds
 ├── docker-compose.yml        # Orchestrates Backend and Redis containers
+├── docker-compose.kafka.yml  # Orchestrates Zookeeper, Kafka, Redis, Backend, and Consumer
 ├── .env                      # Application environment variables (not committed)
 ├── .gitignore                # Excludes node_modules and .env from Git
 └── README.md                 # Project guide & AWS/Kubernetes deployment instructions
@@ -93,6 +96,39 @@ Stop and remove containers and network attachments:
 ```bash
 docker compose down
 ```
+
+---
+
+## Event-Driven Architecture with Apache Kafka (Docker Compose)
+
+Humne project me Apache Kafka integrate kiya hai to learn and demonstrate **Event-Driven Architecture (EDA)**. Is stack me asynchronous message streaming perform hoti hai:
+
+### 1. Workflow
+1. **Producer**: User jab index page ya API playground se item create (`POST /api/items`) karta hai, tab main `backend` container ek `ITEM_CREATED` event serialize karke Kafka broker topic `item-events` par publish karta hai.
+2. **Consumer**: Ek standalone background node process (`consumer.js`) Kafka topic `item-events` ko subscribe karti hai aur incoming events consume karti hai.
+3. **Redis Logging Cache**: Consumer received payload format details parse karke latest 20 logs Redis list `kafka_logs` me `LPUSH` format pattern par write and trim karta hai.
+4. **Real-time Event Monitor UI**: Front-end javascript continuous polling (`GET /api/kafka-events`) perform karke dynamic list elements rendering update karta hai.
+
+### 2. Services Configuration (`docker-compose.kafka.yml`)
+Kafka stack orchestration setup me 5 containers active hote hain:
+- **`zookeeper-container`**: Zookeeper metadata coordinator.
+- **`kafka-container`**: Apache Kafka broker listening on cluster interface `kafka:29092`.
+- **`redis-container`**: Shared database engine.
+- **`backend-container`**: Express app serving backend endpoints and producing events.
+- **`consumer-container`**: Standalone consumer worker process running `node consumer.js`.
+
+### 3. Run and Verify Kafka Stack
+Start all five containers:
+```bash
+docker compose -f docker-compose.kafka.yml up --build -d
+```
+
+Verify logs in consumer container:
+```bash
+docker logs -f consumer-container
+```
+
+Verify that events appear in real-time under the **Kafka Event Monitor** card on the dashboard when creating new items.
 
 ---
 

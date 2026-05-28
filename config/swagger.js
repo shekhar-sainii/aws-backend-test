@@ -119,6 +119,50 @@ const swaggerDefinition = {
         }
       }
     },
+    '/api/kafka-events': {
+      get: {
+        tags: ['System'],
+        summary: 'Fetch recent consumed Kafka events',
+        description: 'Retrieves the log history of Kafka events consumed from the `item-events` topic, stored and cached in Redis.',
+        responses: {
+          200: {
+            description: 'Successfully fetched recent Kafka events',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    count: { type: 'integer', example: 1 },
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          topic: { type: 'string', example: 'item-events' },
+                          partition: { type: 'integer', example: 0 },
+                          offset: { type: 'string', example: '2' },
+                          key: { type: 'string', example: '3' },
+                          payload: {
+                            type: 'object',
+                            properties: {
+                              eventType: { type: 'string', example: 'ITEM_CREATED' },
+                              timestamp: { type: 'string', format: 'date-time' },
+                              item: { type: 'object' }
+                            }
+                          },
+                          receivedAt: { type: 'string', format: 'date-time' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     '/api/items': {
       get: {
         tags: ['Items CRUD'],

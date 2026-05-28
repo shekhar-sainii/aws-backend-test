@@ -48,6 +48,36 @@ router.get('/api/load-balancer', async (req, res) => {
 });
 
 /**
+ * @route   GET /api/kafka-events
+ * @desc    Fetch recently consumed Kafka events from Redis
+ */
+router.get('/api/kafka-events', async (req, res) => {
+  try {
+    if (redisClient.isOpen) {
+      const logs = await redisClient.lRange('kafka_logs', 0, -1);
+      const parsedLogs = logs.map(log => JSON.parse(log));
+      return res.status(200).json({
+        success: true,
+        count: parsedLogs.length,
+        data: parsedLogs
+      });
+    } else {
+      return res.status(503).json({
+        success: false,
+        message: 'Redis cache offline. Cannot retrieve Kafka events logs.'
+      });
+    }
+  } catch (err) {
+    console.error('Error fetching Kafka logs from Redis:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve Kafka logs',
+      error: err.message
+    });
+  }
+});
+
+/**
  * @route   GET /health
  * @desc    Liveness/readiness health check for AWS Load Balancer
  */
