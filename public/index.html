@@ -580,6 +580,57 @@
           </button>
         </div>
 
+        <!-- CI/CD Deployment Pipeline Card -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.05) 100%); border: 1px solid rgba(139, 92, 246, 0.3);">
+          <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <i class="fa-solid fa-circle-nodes" style="color: #a855f7;"></i> CI/CD Pipeline
+            </div>
+            <span class="badge-aws" style="background: rgba(168, 85, 247, 0.15); border: 1px solid #a855f7; color: #d8b4fe; padding: 0.15rem 0.6rem; border-radius: 12px; font-size: 0.75rem;">
+              <i class="fa-solid fa-bolt"></i> Auto-Deploy Active
+            </span>
+          </div>
+          
+          <div class="metric-list" style="margin-top: 0.8rem;">
+            <div class="metric-item">
+              <span class="metric-label">Pipeline Provider</span>
+              <span class="metric-value" style="display: flex; align-items: center; gap: 6px;">
+                <i class="fa-brands fa-github"></i> GitHub Actions
+              </span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Docker Registry</span>
+              <span class="metric-value">
+                <a href="https://hub.docker.com/r/shekharsaini/aws-backend-test" target="_blank" style="color: #818cf8; text-decoration: none;">
+                  <i class="fa-brands fa-docker"></i> shekharsaini/aws-backend-test
+                </a>
+              </span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Target Server</span>
+              <span class="metric-value" style="font-family: monospace; font-size: 0.85rem; color: #a855f7;">
+                AWS EC2 (35.153.133.193)
+              </span>
+            </div>
+            <div class="metric-item" style="border: none;">
+              <span class="metric-label">Trigger Rule</span>
+              <span class="metric-value" style="font-size: 0.85rem; color: var(--text-secondary);">
+                Push to <code style="color: #f43f5e; font-family: monospace;">main</code> branch
+              </span>
+            </div>
+          </div>
+
+          <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(3, 5, 10, 0.6); border-radius: 8px; border: 1px solid rgba(255,255,255,0.03); font-size: 0.8rem; display: flex; align-items: center; gap: 10px;">
+            <div class="logo-icon" style="width: 24px; height: 24px; border-radius: 6px; font-size: 0.75rem; background: var(--primary-gradient); display: flex; align-items: center; justify-content: center;">
+              <i class="fa-solid fa-code-commit"></i>
+            </div>
+            <div style="flex: 1;">
+              <div style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase;">Active Deploy Commit</div>
+              <div style="font-weight: 600; color: #fff; font-family: monospace;" id="ci-cd-sha">latest</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Load Balancer Sandbox -->
         <div class="card">
           <div class="card-title">
@@ -808,6 +859,19 @@
         
         document.getElementById('platform').innerText = data.platform;
         document.getElementById('node-ver').innerText = data.nodeVersion;
+        
+        // Populate commit SHA
+        const ciCdShaEl = document.getElementById('ci-cd-sha');
+        if (ciCdShaEl) {
+          if (data.commitSha && data.commitSha !== 'local-dev') {
+            ciCdShaEl.innerText = data.commitSha.substring(0, 7);
+            ciCdShaEl.title = data.commitSha;
+            ciCdShaEl.style.color = '#38bdf8';
+          } else {
+            ciCdShaEl.innerText = 'local-dev';
+            ciCdShaEl.style.color = 'var(--text-secondary)';
+          }
+        }
         
         // Format RAM
         const mbUsed = Math.round(data.memoryUsage.rss / 1024 / 1024);

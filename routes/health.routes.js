@@ -91,7 +91,8 @@ router.get('/health', (req, res) => {
     memoryUsage: process.memoryUsage(),
     platform: process.platform,
     redisConnected: redisClient.isOpen,
-    runningOnK8s: config.IS_K8S
+    runningOnK8s: config.IS_K8S,
+    commitSha: process.env.COMMIT_SHA || 'local-dev'
   };
 
   try {
