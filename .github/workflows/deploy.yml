@@ -40,6 +40,9 @@ jobs:
           script: |
             cd ~/aws-backend-test
             
+            # Pull the latest configuration files (including updated docker-compose.yml)
+            git pull
+            
             # Pull the latest image built and pushed by the pipeline
             docker compose pull
             
