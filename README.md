@@ -240,3 +240,37 @@ This is the standard enterprise way to run `docker-compose` designs on AWS.
      - **Container 2 (redis)**: Set image to `redis:7-alpine`, map container port `6379`.
 3. **Run Services:**
    Deploy this task definition inside an ECS Service. AWS will run and scale both containers together.
+
+---
+
+## CI/CD Pipeline Setup (GitHub Actions & Docker Hub)
+
+Humne project me automated **CI/CD Pipeline** configure kiya hai using **GitHub Actions**. Ab har baar jab aap `main` branch me changes push karenge, toh deployment automatically remote AWS EC2 server par perform ho jayegi.
+
+### 1. Workflow Pipeline Steps
+1. **Triggers**: Pipeline automatically trigger hoti hai jab `main` branch par push execute hota hai.
+2. **Docker Buildx Setup**: VM workspace initialize karke Buildx compile support create karta hai.
+3. **Docker Hub Auth**: Registry secure login perform karta hai using credentials.
+4. **Build & Push**: Production image compiled aur tagged hoti hai (`shekharsaini/aws-backend-test:latest`) and then registry par push.
+5. **AWS EC2 Deploy**: SSH via PEM keys connect karke `docker compose pull` aur `docker compose up -d` run karta hai.
+
+### 2. GitHub Secrets Setup
+Workflow successfully execute hone ke liye aapko GitHub repository settings me niche diye gaye secrets add karne honge (**Settings > Secrets and variables > Actions > New repository secret**):
+
+* **`DOCKER_USERNAME`**: Aapka Docker Hub Username (e.g., `shekharsaini`).
+* **`DOCKER_PASSWORD`**: Aapka Docker Hub password ya Personal Access Token (PAT).
+* **`EC2_HOST`**: AWS EC2 instance public IP ya domain (e.g., `shekharsaini.duckdns.org`).
+* **`EC2_USER`**: SSH login user name (e.g., `ubuntu`).
+* **`EC2_SSH_KEY`**: Aapki private key (`.pem` file) ka complete text content.
+
+### 3. Running Deployment manually
+1. Apne local system par changes check-in karein:
+   ```bash
+   git add .
+   git commit -m "Deploying new update"
+   ```
+2. Trigger the pipeline:
+   ```bash
+   git push origin main
+   ```
+3. GitHub Repository ke **Actions** tab par jakar live pipeline execution status aur logs monitor karein.

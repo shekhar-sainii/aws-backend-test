@@ -36,6 +36,7 @@ services:
     restart: always
 
   backend:
+    image: shekharsaini/aws-backend-test:latest
     build: .
     container_name: backend-container
     ports:
@@ -51,6 +52,7 @@ services:
       - redis
 
   consumer:
+    image: shekharsaini/aws-backend-test:latest
     build: .
     container_name: consumer-container
     command: node consumer.js
